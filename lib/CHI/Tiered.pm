@@ -55,9 +55,9 @@ more abundant storage (like disk or distributed cache).
 
 =head2 new
 
-    my $cache = CHI::Tiered->new(@tiers);
-
 Creates a new CHI::Tiered object. Tiers can be specified in two ways:
+
+    my $cache = CHI::Tiered->new(@tiers);
 
 =over 4
 
