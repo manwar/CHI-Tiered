@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use CHI;
 use Carp;
+use Scalar::Util 'blessed';
 
 our $VERSION = '0.01';
 
@@ -105,6 +106,17 @@ sub new {
     } else {
         # Interface 2: User provided a list of pre-configured CHI objects.
         # We must respect the user's order here.
+        my @SUPPORTED_DRIVERS = qw/Memory Memcached FastMmap Redis File/;
+        foreach my $obj (@args) {
+            if (blessed($obj) && $obj->isa('CHI::Driver')) {
+                my $driver = $obj->short_driver_name;
+                die "Unsupported driver $driver.\n"
+                    unless (grep /$driver/, @SUPPORTED_DRIVERS);
+            }
+            else {
+                die "Not CHI::Driver object.\n";
+            }
+        }
         $self->{_tiers} = \@args;
     }
 
