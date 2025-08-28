@@ -1,0 +1,13 @@
+Changes
+lib/CHI/Tiered.pm
+LICENSE
+Makefile.PL
+MANIFEST
+MANIFEST.SKIP
+README
+t/00-load.t
+t/01_driver_name.t
+t/02_driver_obj.t
+t/03_driver_extended.t
+t/manifest.t
+t/pod.t
