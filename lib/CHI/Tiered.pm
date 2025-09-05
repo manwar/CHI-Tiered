@@ -104,7 +104,7 @@ sub new {
             push @{$self->{_tiers}}, $cache;
         }
     } else {
-        # Interface 2: User provided a list of pre-configured CHI objects.
+        # Interface 2: User provided a list of pre-configured CHI drivers.
         # We must respect the user's order here.
         my @SUPPORTED_DRIVERS = qw/Memory Memcached FastMmap Redis File/;
         foreach my $obj (@args) {
