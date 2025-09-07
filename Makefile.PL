@@ -19,7 +19,7 @@ WriteMakefile(
         'Test::More' => 0,
     },
     PREREQ_PM => {
-        'CHI'          => 0,
+        'CHI'          => '0.61',
         'Carp'         => 0,
         'Scalar::Util' => 0,
     },
