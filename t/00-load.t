@@ -1,8 +1,8 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
-use 5.006;
+use v5.14;
 use strict;
-use warnings FATAL => 'all';
+use warnings;
 use Test::More tests => 1;
 
 BEGIN { use_ok('CHI::Tiered') || print "Bail out!\n"; }

@@ -31,14 +31,14 @@ Version 0.01
     my $file_cache   = CHI->new(driver => 'File',   root_dir => '/tmp/cache');
     my $cache        = CHI::Tiered->new($memory_cache, $file_cache);
 
-    # Get or set data (automatically caches across all tiers)
-    my $data = $cache->get_or_set('my_key', sub {
-        # Expensive computation or data retrieval
-        return compute_expensive_data();
-    });
+    # Set value (automatically caches across all tiers)
+    my $value = $cache->set('key', 'value');
 
-    # Remove data from all tiers
-    $cache->remove('my_key');
+    # Get cache value
+    print $cache->get('key');
+
+    # Remove cache value from all tiers
+    $cache->remove('key');
 
 =head1 DESCRIPTION
 
@@ -85,19 +85,18 @@ The order of tiers is important - they should be specified from fastest to slowe
 
 sub new {
     my ($class, @args) = @_;
-    my $self = bless {}, $class;
 
-    $self->{_tiers} = [];
-
-    # Check if we received any arguments at all
     if (!@args) {
         croak "Constructor requires at least one argument: list of arrayref or list of pre-configured CHI object.";
     }
 
+    my $self = bless {}, $class;
+    $self->{_tiers} = [];
+
     # Determine the argument type: a list of strings or a list of objects
     if (ref($args[0]) eq 'ARRAY') {
         # Interface 1: User provided a list of arrayref like below:
-        # [ driver => 'Memory', datastore => \%SHARED_DATASTORE      ],
+        # [ driver => 'Memory', global    => 1                       ],
         # [ driver => 'File',   root_dir  => tempdir( CLEANUP => 1 ) ],
         foreach my $chi_driver (@args) {
             my $cache = CHI->new(@$chi_driver);
@@ -106,16 +105,9 @@ sub new {
     } else {
         # Interface 2: User provided a list of pre-configured CHI drivers.
         # We must respect the user's order here.
-        my @SUPPORTED_DRIVERS = qw/Memory Memcached FastMmap Redis File/;
         foreach my $obj (@args) {
-            if (blessed($obj) && $obj->isa('CHI::Driver')) {
-                my $driver = $obj->short_driver_name;
-                die "Unsupported driver $driver.\n"
-                    unless (grep /$driver/, @SUPPORTED_DRIVERS);
-            }
-            else {
-                die "Not CHI::Driver object.\n";
-            }
+            die "Not CHI::Driver object.\n"
+                unless (blessed($obj) && $obj->isa('CHI::Driver'));
         }
         $self->{_tiers} = \@args;
     }
@@ -125,72 +117,61 @@ sub new {
 
 =head1 METHODS
 
-=head2 get_or_set
+=head2 get
 
 Retrieves a value from the cache tiers. If the value is found in any tier,
-it returns the value and promotes it to all faster tiers. If the value is
-not found in any tier, it executes the code reference to generate the value,
-stores it in all tiers, and returns it.
+it returns the value and promotes it to all faster tiers.
 
-    my $value = $cache->get_or_set($key, $code_ref);
-
-Parameters:
-
-=over 4
-
-=item * $key - The cache key
-
-=item * $code_ref - A code reference that returns the value to cache if not found
-
-=back
-
-Returns: The cached or generated value
+    my $value = $cache->get('key');
 
 =cut
 
-sub get_or_set {
-    my ($self, $key, $code_ref) = @_;
+sub get {
+    my ($self, $key) = @_;
 
     # Iterate through each cache tier from fastest to slowest
-    my $data;
+    my $value;
     for (my $i = 0; $i < @{$self->{_tiers}}; $i++) {
         my $tier = $self->{_tiers}->[$i];
-        $data = $tier->get($key);
+        $value = $tier->get($key);
 
-        # If data is found, promote it to all faster tiers
-        if (defined $data) {
+        # If value is found, promote it to all faster tiers
+        if (defined $value) {
             # Start from the found tier and promote to all previous tiers
             for (my $j = $i - 1; $j >= 0; $j--) {
-                $self->{_tiers}->[$j]->set($key, $data);
+                $self->{_tiers}->[$j]->set($key, $value);
             }
-            return $data;
+            return $value;
         }
     }
 
-    # If data is not found in any tier, generate it
-    $data = $code_ref->();
+    return $value;
+}
+
+=head2 set($key, $value, [ $expires_in | "now" | "never" ])
+
+Sets the value to the key in all tiers and return it.
+
+    my $value = $cache->set('key', 'value', '1 hour');
+
+=cut
+
+sub set {
+    my ($self, $key, $value, $expires_in) = @_;
 
     # Set the data in all tiers for future use
     foreach my $tier (@{$self->{_tiers}}) {
-        $tier->set($key, $data);
+        $tier->set($key, $value, $expires_in);
     }
 
-    return $data;
+    return $value;
 }
 
 =head2 remove
 
 Removes the specified key from all cache tiers.
 
-    $cache->remove($key);
-
-Parameters:
-
-=over 4
-
-=item * $key - The cache key to remove
-
-=back
+    $cache->remove('key');
 
 =cut
 
@@ -222,21 +203,16 @@ promoted to all faster tiers
 =head2 Two-tier memory and file cache
 
     my $cache = CHI::Tiered->new(
-        [ driver => 'Memory', global => 1, max_size => 1024 * 1024 ],
-        [ driver => 'File', root_dir => '/var/cache/app', depth => 3 ]
+        [ driver => 'Memory', global   => 1            ],
+        [ driver => 'File',   root_dir => '/tmp/cache' ],
     );
-
-    my $result = $cache->get_or_set('user_profile_123', sub {
-        # Expensive database query
-        return $db->selectrow_hashref('SELECT * FROM users WHERE id = 123');
-    });
 
 =head2 Three-tier cache with memory, file and memcached
 
     my $cache = CHI::Tiered->new(
-        [ driver => 'Memory',    global   => 1 ],
-        [ driver => 'File',      root_dir => '/tmp/cache' ],
-        [ driver => 'Memcached', servers  => [ 'cache1:11211', 'cache2:11211' ] ]
+        [ driver => 'Memory',    global   => 1                     ],
+        [ driver => 'File',      root_dir => '/tmp/cache'          ],
+        [ driver => 'Memcached', servers  => [ '127.0.0.1:11211' ] ],
     );
 
 =head1 AUTHOR

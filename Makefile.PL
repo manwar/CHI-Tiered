@@ -19,7 +19,9 @@ WriteMakefile(
         'Test::More' => 0,
     },
     PREREQ_PM => {
-        'CHI' => 0,
+        'CHI'          => 0,
+        'Carp'         => 0,
+        'Scalar::Util' => 0,
     },
     dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean => { FILES => 'CHI-Tiered-*' },
