@@ -183,6 +183,23 @@ sub remove {
     }
 }
 
+=head2 clear
+
+Clear the entire cache completely.
+
+    $cache->clear;
+
+=cut
+
+sub clear {
+    my ($self) = @_;
+
+    foreach my $tier (@{$self->{_tiers}}) {
+        next if ($tier->label eq 'Memcached');
+        $tier->clear;
+    }
+}
+
 =head1 BEHAVIOUR
 
 =over 4

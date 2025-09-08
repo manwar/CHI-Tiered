@@ -71,6 +71,8 @@ my $cache = CHI::Tiered->new(
     $file_cache,
 );
 
+$cache->clear;
+
 # Test 1: Tiered cache initialization
 isa_ok $cache, 'CHI::Tiered', 'Tiered cache object created successfully';
 
