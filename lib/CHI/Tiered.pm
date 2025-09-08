@@ -26,7 +26,7 @@ Version 0.01
         [ driver => 'File',   root_dir => '/tmp/cache' ],
     );
 
-    # Or with pre-configured CHI objects
+    # Or with pre-configured list of CHI::Driver objects
     my $memory_cache = CHI->new(driver => 'Memory', global   => 1);
     my $file_cache   = CHI->new(driver => 'File',   root_dir => '/tmp/cache');
     my $cache        = CHI::Tiered->new($memory_cache, $file_cache);
@@ -69,7 +69,7 @@ Creates a new CHI::Tiered object. Tiers can be specified in two ways:
         [ driver => 'Memcached', servers  => [ '127.0.0.1:11211' ] ]
     );
 
-=item * Pre-configured CHI objects:
+=item * Pre-configured list of CHI::Driver objects:
 
     my $memory    = CHI->new(driver => 'Memory',    global   => 1);
     my $file      = CHI->new(driver => 'File',      root_dir => '/tmp/cache');
@@ -93,17 +93,17 @@ sub new {
     my $self = bless {}, $class;
     $self->{_tiers} = [];
 
-    # Determine the argument type: a list of strings or a list of objects
+    # Determine the argument type: a list of arrayrefs or a list of objects
     if (ref($args[0]) eq 'ARRAY') {
         # Interface 1: User provided a list of arrayref like below:
-        # [ driver => 'Memory', global    => 1                       ],
-        # [ driver => 'File',   root_dir  => tempdir( CLEANUP => 1 ) ],
+        # [driver => 'Memory', global   => 1                    ],
+        # [driver => 'File',   root_dir => tempdir(CLEANUP => 1)],
         foreach my $chi_driver (@args) {
             my $cache = CHI->new(@$chi_driver);
             push @{$self->{_tiers}}, $cache;
         }
     } else {
-        # Interface 2: User provided a list of pre-configured CHI drivers.
+        # Interface 2: User provided a list of pre-configured CHI::Driver objects.
         # We must respect the user's order here.
         foreach my $obj (@args) {
             die "Not CHI::Driver object.\n"
