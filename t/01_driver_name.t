@@ -18,8 +18,6 @@ my $cache = CHI::Tiered->new(
 
 $cache->clear;
 
-# The module will automatically create the underlying CHI objects.
-# We can't test them directly since they are private to the object.
 isa_ok $cache, 'CHI::Tiered', 'Tiered cache object created successfully';
 
 # Test 1: Initial `set` call (cache miss)
